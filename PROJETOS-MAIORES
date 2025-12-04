@@ -1,1 +1,111 @@
 
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID.   PROGVI01.
+       AUTHOR.       VINICIUS.
+      ******************************************************************
+      * SISTEMA: SITRN - SISTEMA DE GESTAO TREINAMENTO                 *
+      * PROGRAMA: PROGCH01                                             *
+      * OBJETIVO: LER ARQUIVO DE ENTRADA E GERAR UM ARQUIVO DE SAIDA   *
+      * ANALISTA: VINICIUS                                             *
+      * PROGRAMADOR: VINICIUS QUEIROZ                                  *
+      * DATA: 10/03/15                                                 *
+      * LINGUAGEM: COBOL                                               *
+      * VERSAO: 001                                                    *
+      ******************************************************************
+      * ASSOCIA OS ARQUIVOS DE ENTRADA A DISPOSITIVOS ESPECIFICOS      *
+
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SPECIAL-NAMES.
+           DECIMAL-POINT IS COMMA.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT ARQE001 ASSIGN TO ENTRADA.
+           SELECT ARQS001 ASSIGN TO SAIDA.
+       DATA DIVISION.
+       FILE SECTION.
+       FD  ARQE001  
+           LABEL RECORD IS STANDARD
+           RECORDING MODE IS F
+           RECORD CONTAINS 100 CHARACTERS
+           DATA RECORD IS REG-ARQE001.
+       01  REG-ARQE001.
+           03 MAT-E             PIC 9(06).
+           03 NOME-E            PIC X(20).
+           03 FUNCAO-E          PIC X(15).
+           03 CARGO-E           PIC X(15).
+           03 SAL-E             PIC 9(08)V99.
+           03 GRAT-E            PIC 9(08)V99.
+           03 ABONO-E           PIC 9(08)V99.
+           03 DESC-E            PIC 9(08)V99.
+           03 SEXO-E            PIC X(01).
+           03 SIT-E             PIC X(01).
+           03 FILLER            PIC X(02).
+       FD  ARQS001 LABEL RECORD IS STANDARD  
+           RECORDING MODE IS F
+           RECORD CONTAINS 100 CHARACTERS
+           DATA RECORD IS REG-ARQS001.
+       01  REG-ARQS001.
+           03 MATRICULA-S       PIC 9(06).
+           03 NOME-S            PIC X(20).
+           03 LIQUIDO-S         PIC 9(10)V99.
+           03 FILLER            PIC X(62).
+
+       WORKING-STORAGE SECTION.
+       77  WS-SALIQ             PIC 9(08)V99    VALUE 0.
+       77  WS-DATA              PIC 9(06)       VALUE 0.
+       77  WS-DATAR             PIC X(08)       VALUE SPACES.
+       77  WS-TOTFUN            PIC 9(06)       VALUE 0.
+       77  WS-TOTFUN-ED         PIC ZZZZZ9.
+       77  WS-SALTOT            PIC 9(10)V99    VALUE 0.
+       77  WS-SALTOT-ED         PIC Z.ZZZ.ZZZ.ZZ9,99.
+       77  WS-FIM               PIC 9(01)       VALUE 0.
+      * CONJUNTO DE INSTRUCOES A SER EXECUTADA PELO COMPUTADOR         *
+
+       PROCEDURE DIVISION.
+           PERFORM 100-INICIO   THRU 100-S.
+           PERFORM 200-PROC     THRU 200-S UNTIL WS-FIM = 1.
+           PERFORM 300-FINAL    THRU 300-S.
+           STOP RUN.
+
+       100-INICIO.
+           DISPLAY '***************************************************'
+           DISPLAY '**    INICIO DO PROGRAMA                         **'
+           DISPLAY '***************************************************'
+           OPEN INPUT  ARQE001
+                OUTPUT ARQS001.
+           ACCEPT WS-DATA FROM DATE.
+           STRING WS-DATA(5:2) '/'
+                  WS-DATA(3:2) '/'
+                  WS-DATA(1:2)
+           DELIMITED BY SIZE INTO WS-DATAR.
+           DISPLAY ' **   DATA DO PROCESSAMENTO : ' WS-DATAR.
+           READ ARQE001 AT END DISPLAY '**   ARQUIVO VAZIO   **' STOP RUN.
+       100-S.
+           EXIT.
+       200-PROC.
+           COMPUTE WS-SALIQ = (SAL-E + ABONO-E + GRAT-E) -
+                               DESC-E.
+           ADD 1               TO WS-TOTFUN.
+           ADD WS-SALIQ        TO WS-SALTOT.
+           MOVE MAT-E          TO MATRICULA-S.
+           MOVE NOME-E         TO NOME-S.
+           MOVE WS-SALIQ       TO LIQUIDO-S.
+           WRITE REG-ARQS001.
+           READ ARQE001 AT END MOVE 1 TO WS-FIM.
+       200-S.
+           EXIT.
+       300-FINAL.
+           MOVE WS-TOTFUNC     TO WS-TOTFUNC-ED.
+           MOVE WS-SALTOT      TO WS-SALTOT-ED.
+           DISPLAY '***************************************************'
+           DISPLAY '**    TOTAL DE FUNCIONARIOS : ' WS-TOTFUN-ED.
+           DISPLAY '**    TOTAL DE SALARIO      : ' WS-SALTOT-ED.
+           DISPLAY '***************************************************'
+           DISPLAY '**    PROCESSAMENTO FINALIZADO COM SUCESSO       **'
+           DISPLAY '***************************************************'
+           CLOSE ARQE001
+                 ARQS001.
+       300-S.
+           EXIT.
+
