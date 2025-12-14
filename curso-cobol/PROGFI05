@@ -1,1 +1,198 @@
-
+ IDENTIFICATION DIVISION.             
+ PROGRAM-ID. PROGFI05.                
+ AUTHOR. FILLIPE SOARES               
+ ENVIRONMENT DIVISION.                
+ CONFIGURATION SECTION.               
+ SPECIAL-NAMES.                       
+     DECIMAL-POINT IS COMMA.          
+ INPUT-OUTPUT SECTION.                
+ FILE-CONTROL.                        
+     SELECT DEPSEC ASSIGN TO ENTRADA. 
+     SELECT RELATO ASSIGN TO RELATO.  
+ DATA DIVISION.                       
+ FILE SECTION.                        
+ COPY 'DEPSEC'.                       
+*FD  DEPSEC LABEL RECORD IS STANDARD  
+*           RECORDING MODE IS F.      
+*01  REG-DEPSEC.                      
+*    03 DEPTO-E         PIC 9(003).   
+*    03 SECAO-E         PIC 9(003). 
+ *    03 CODVEND-E       PIC X(004).         
+ *    03 CODPROD-E       PIC 9(004).         
+ *    03 QTD-E           PIC 9(005).         
+ *    03 VLUNIT-E        PIC 9(008)V99.      
+ *    03 FILLER          PIC X(071).         
+  FD RELATO LABEL RECORD IS OMITTED          
+      RECORDING MODE IS F.                   
+  01 REG-RELATO         PIC X(132).          
+  WORKING-STORAGE SECTION.                   
+  77 WS-PAG             PIC 9(04) VALUE 0.   
+  77 WS-LINHA           PIC 9(02) VALUE 99.  
+  77 WS-DEPANT          PIC 9(03).           
+  77 WS-SECANT          PIC 9(03).           
+  77 WS-QTDEP           PIC 9(06) VALUE 0.   
+  77 WS-QTDSEC          PIC 9(06) VALUE 0.   
+  77 WS-QTDGER          PIC 9(06) VALUE 0.   
+  77 WS-VENDA           PIC 9(08)V99.        
+  77 WS-VLDEP           PIC 9(08)V99 VALUE 0.
+  77 WS-VLSEC           PIC 9(08)V99 VALUE 0.
+  77 WS-VLGER           PIC 9(08)V99 VALUE 0.
+ 77 WS-VLGER-ED        PIC ZZ.ZZZ.ZZ9,99.                  
+ 77 WS-DATA            PIC 9(06).                          
+ 77 WS-DATAR           PIC X(08).                          
+ 77 WS-FIM             PIC 9(01) VALUE 0.                  
+ 01 CAB-01.                                                
+     03 FILLER         PIC X(23) VALUE                     
+     'CAIXA ECONOMICA FEDERAL'.                            
+     03 FILLER         PIC X(35) VALUE SPACES.             
+     03 FILLER         PIC X(17) VALUE 'RELACAO DE VENDAS'.
+     03 FILLER         PIC X(45) VALUE SPACES.             
+     03 FILLER         PIC X(09) VALUE 'PAGINA : '.        
+     03 CAB-PAGINA     PIC ZZ9.                            
+ 01 CAB-02.                                                
+     03 FILLER         PIC X(17) VALUE                     
+      'SISTEMA DE VENDAS'.                                 
+     03 FILLER         PIC X(100) VALUE SPACES.            
+     03 FILLER         PIC X(07)  VALUE 'DATA : '.         
+     03 CAB-DATA       PIC X(08).                          
+ 01 CAB-03.                                                
+     03 FILLER         PIC X(132) VALUE ALL '-'.     
+ 01 CAB-04.                                              
+     03 FILLER         PIC X(05) VALUE 'DEPTO'.          
+     03 FILLER         PIC X(05) VALUE SPACES.           
+     03 FILLER         PIC X(05) VALUE 'SECAO'.          
+     03 FILLER         PIC X(05) VALUE SPACES.           
+     03 FILLER         PIC X(15) VALUE 'CODIGO VENDEDOR'.
+     03 FILLER         PIC X(05) VALUE SPACES.           
+     03 FILLER         PIC X(07) VALUE 'PRODUTO'.        
+     03 FILLER         PIC X(05) VALUE SPACES.           
+     03 FILLER         PIC X(05) VALUE 'QUANT'.          
+     03 FILLER         PIC X(05) VALUE SPACES.           
+     03 FILLER         PIC X(14) VALUE 'VALOR UNITARIO'. 
+     03 FILLER         PIC X(05) VALUE SPACES.           
+     03 FILLER         PIC X(11) VALUE 'VALOR VENDA'.    
+ 01 CAB-05             PIC X(132) VALUE SPACES.          
+ 01 DET-01.                                              
+     03 DET-DEP        PIC 9(03)B(07).                   
+*    03 FILLER         PIC X(07) VALUE SPACE.            
+     03 DET-SEC        PIC 9(03)B(07).                   
+     03 DET-CODVEND    PIC 9(04)B(16).    
+     03 DET-CODPROD    PIC X(04)B(08).                   
+     03 DET-QTD        PIC 9(04)B(06).                   
+     03 DET-VLUNIT     PIC ZZZ.ZZZ.ZZ9,99B(05).          
+     03 DET-VENDA      PIC ZZZ.ZZZ.ZZ9,99.               
+ 01 ROD-01.                                              
+     03 FILLER         PIC X(14) VALUE 'TOTAL SECAO : '. 
+     03 ROD-QTDSEC     PIC ZZZ9.                         
+     03 FILLER         PIC X(05) VALUE SPACE.            
+     03 ROD-VLSEC      PIC Z.ZZZ.ZZZ.ZZ9,99.             
+ 01 ROD-02.                                              
+     03 FILLER         PIC X(14) VALUE 'TOTAL DEPTO : '. 
+     03 ROD-QTDEP      PIC ZZZ9.                         
+     03 FILLER         PIC X(05) VALUE SPACES.           
+     03 ROD-VLDEP      PIC Z.ZZZ.ZZZ.ZZ9,99.             
+ 01 ROD-03.                                              
+     03 FILLER         PIC X(14) VALUE 'TOTAL GERAL : '. 
+     03 ROD-QTDGER     PIC ZZZ9.                         
+     03 FILLER         PIC X(05) VALUE SPACES.           
+     03 ROD-VLGER      PIC Z.ZZZ.ZZZ.ZZ9,99.             
+ PROCEDURE DIVISION.       
+     PERFORM 100-INICIO    THRU 100-S.                         
+     PERFORM 200-PROC      THRU 200-S UNTIL WS-FIM = 1.        
+     PERFORM 300-FINAL     THRU 300-S.                         
+     STOP RUN.                                                 
+ 100-INICIO.                                                   
+     DISPLAY '*** INICIO DO PROCESSAMENTO ***'                 
+     ACCEPT WS-DATA FROM DATE                                  
+     STRING WS-DATA(5:2) '/'                                   
+            WS-DATA(3:2) '/'                                   
+            WS-DATA(1:2)                                       
+     DELIMITED BY SIZE INTO WS-DATAR.                          
+     DISPLAY 'DATA DO PROCESSAMENTO : ' WS-DATAR               
+     OPEN INPUT DEPSEC                                         
+          OUTPUT RELATO.                                       
+     READ DEPSEC AT END DISPLAY '** ARQUIVO VAZIO **' STOP RUN.
+     MOVE DEPTO-E TO WS-DEPANT.                                
+     MOVE SECAO-E TO WS-SECANT.                                
+ 100-S.                                                        
+     EXIT.                                                     
+ 200-PROC.    
+     IF WS-LINHA > 60                         
+        PERFORM 900-CAB THRU 900-S            
+     END-IF.                                  
+     IF DEPTO-E NOT EQUAL WS-DEPANT           
+         PERFORM 400-DEP THRU 400-S           
+     ELSE                                     
+         IF SECAO-E NOT EQUAL WS-SECANT       
+            PERFORM 500-SEC THRU 500-S        
+         END-IF                               
+     END-IF.                                  
+     COMPUTE WS-VENDA = QTD-E * VLUNIT-E      
+     MOVE DEPTO-E       TO DET-DEP.           
+     MOVE SECAO-E       TO DET-SEC.           
+     MOVE VLUNIT-E      TO DET-VLUNIT.        
+     MOVE CODVEND-E     TO DET-CODVEND        
+     MOVE CODPROD-E     TO DET-CODPROD        
+     MOVE QTD-E         TO DET-QTD            
+     MOVE WS-VENDA      TO DET-VENDA.         
+     WRITE REG-RELATO   FROM DET-01 AFTER 1.  
+     ADD  1             TO WS-LINHA.  
+     ADD  QTD-E         TO WS-QTDSEC.                             
+     ADD  WS-VENDA      TO WS-VLSEC.                              
+     READ DEPSEC AT END MOVE 1 TO WS-FIM.                         
+ 200-S.                                                           
+     EXIT.                                                        
+ 300-FINAL.                                                       
+     PERFORM 400-DEP    THRU 400-S.                               
+     MOVE WS-QTDGER     TO ROD-QTDGER.                            
+     MOVE WS-VLGER      TO ROD-VLGER.                             
+     MOVE WS-VLGER      TO WS-VLGER-ED.                           
+     WRITE REG-RELATO   FROM ROD-03 AFTER 2.                      
+     DISPLAY '***************************************************'
+     DISPLAY '* QUANTIDADE TOTAL DE VENDAS : ' WS-QTDGER.         
+     DISPLAY '* VALOR TOTAL DE VENDAS      : ' WS-VLGER-ED.       
+     DISPLAY '***************************************************'
+     CLOSE DEPSEC RELATO.                                         
+ 300-S.                                                           
+     EXIT.                                                        
+ 400-DEP.                                                         
+     PERFORM 500-SEC     THRU 500-S.    
+     MOVE  WS-QTDEP      TO   ROD-QTDEP.      
+     MOVE  WS-VLDEP      TO   ROD-VLDEP.      
+     WRITE REG-RELATO    FROM ROD-02 AFTER 2. 
+     MOVE  SPACES TO REG-RELATO               
+     WRITE REG-RELATO AFTER 1.                
+     ADD   3             TO   WS-LINHA.       
+     ADD   WS-QTDEP      TO   WS-QTDGER.      
+     ADD   WS-VLDEP      TO   WS-VLGER.       
+     MOVE  DEPTO-E       TO   WS-DEPANT.      
+     MOVE  0             TO   WS-QTDEP.       
+     MOVE  0             TO   WS-VLDEP.       
+ 400-S.                                       
+     EXIT.                                    
+ 500-SEC.                                     
+     MOVE  WS-QTDSEC     TO   ROD-QTDSEC.     
+     MOVE  WS-VLSEC      TO   ROD-VLSEC.      
+     WRITE REG-RELATO    FROM ROD-01 AFTER 2. 
+     MOVE  SPACES        TO REG-RELATO        
+     WRITE REG-RELATO    AFTER 1              
+     ADD   3             TO   WS-LINHA.    
+     ADD   WS-QTDSEC     TO   WS-QTDEP.         
+     ADD   WS-VLSEC      TO   WS-VLDEP.         
+     MOVE  SECAO-E       TO   WS-SECANT.        
+     MOVE  0             TO   WS-QTDSEC         
+     MOVE  0             TO   WS-VLSEC.         
+ 500-S.                                         
+     EXIT.                                      
+ 900-CAB.                                       
+     ADD   1             TO   WS-PAG.           
+     MOVE  WS-PAG        TO   CAB-PAGINA.       
+     MOVE  WS-DATAR      TO   CAB-DATA.         
+     WRITE REG-RELATO    FROM CAB-01 AFTER PAGE.
+     WRITE REG-RELATO    FROM CAB-02 AFTER 1.   
+     WRITE REG-RELATO    FROM CAB-03 AFTER 1.   
+     WRITE REG-RELATO    FROM CAB-04 AFTER 1.   
+     WRITE REG-RELATO    FROM CAB-05 AFTER 1.   
+     MOVE  5             TO WS-LINHA.           
+ 900-S.                                         
+     EXIT.                                      
