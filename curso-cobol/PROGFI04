@@ -1,1 +1,149 @@
-
+ IDENTIFICATION DIVISION.                                         
+ PROGRAM-ID. PROGFI04.                                            
+ AUTHOR. FILLIPE SOARES.                                          
+ ENVIRONMENT DIVISION.                                            
+ CONFIGURATION SECTION.                                           
+ SPECIAL-NAMES.                                                   
+     DECIMAL-POINT IS COMMA.                                      
+ INPUT-OUTPUT SECTION.                                            
+ FILE-CONTROL.                                                    
+     SELECT ARQE002 ASSIGN TO ENTRADA.                            
+     SELECT RELATO  ASSIGN TO RELATO.                             
+ DATA DIVISION.                                                   
+ FILE SECTION.                                                    
+*---------COPY BOOK DO ARQUIVO ----------------------------------*
+ COPY 'ARQE002'.                                                  
+*----------------------------------------------------------------*
+ FD RELATO LABEL RECORD IS OMITTED                                
+          RECORDING MODE IS F.                                    
+ 01 REG-RELATO                       PIC X(132).     
+ WORKING-STORAGE SECTION.                                      
+ 77 WS-FIM                           PIC 9(01) VALUE ZEROS.    
+ 77 WS-TIMES                         PIC X(08).                
+ 77 WS-TIME                          PIC X(06).                
+ 77 WS-DATA                          PIC 9(06).                
+ 77 WS-DATAR                         PIC X(08).                
+ 77 WS-TOTFUN                        PIC 9(06) VALUE 0.        
+ 77 WS-TOTFUN-ED                     PIC ZZZ.ZZ9.              
+ 77 WS-SALTOT                        PIC 9(10)V99 VALUE ZEROS. 
+ 77 WS-SALTOT-ED                     PIC Z.ZZZ.ZZZ.ZZ9,99.     
+ 77 WS-PAG                           PIC 9(04) VALUE 0.        
+ 77 WS-LINHA                         PIC 9(02) VALUE 99.       
+ 01 CAB-01.                                                    
+     03 FILLER              PIC X(16) VALUE 'CAST INFORMATICA'.
+     03 FILLER              PIC X(104) VALUE SPACES.           
+     03 FILLER              PIC X(09) VALUE 'PAGINA : '.       
+     03 CAB-PAG             PIC ZZ9.                           
+ 01 CAB-02.                                                    
+     03 FILLER              PIC X(25) VALUE                    
+       'RELATORIO DE FUNCIONARIOS'.                 
+     03 FILLER              PIC X(92) VALUE SPACES.               
+     03 FILLER              PIC X(07) VALUE 'DATA : '.            
+     03 CAB-DATA            PIC X(08).                            
+ 01 CAB-03.                                                       
+     03 FILLER              PIC X(132) VALUE ALL '-'.             
+ 01 CAB-04.                                                       
+     03 FILLER              PIC X(09) VALUE 'MATRICULA'.          
+     03 FILLER              PIC X(10) VALUE SPACES.               
+     03 FILLER              PIC X(19) VALUE 'NOME DO FUNCIONARIO'.
+     03 FILLER              PIC X(10) VALUE SPACES.               
+     03 FILLER              PIC X(15) VALUE 'SALARIO LIQUIDO'.    
+ 01 CAB-05.                                                       
+     03 FILLER              PIC X(132) VALUE SPACES.              
+ 01 DET-01.                                                       
+     03 DET-MAT             PIC 9(06)B(13).                       
+*   03 FILLER              PIC X(13) VALUE SPACE.                 
+     03 DET-NOME            PIC X(20)B(09).                       
+     03 DET-SALIQ           PIC Z.ZZZ.ZZZ.ZZ9,99.                 
+ 01 ROD-01.                                                       
+     03 FILLER           PIC X(24) VALUE 'TOTAL DE FUNCIONARIOS:'.
+     03 ROD-TOTFUN       PIC ZZZ.ZZ9.                             
+ 01 ROD-02.                                                       
+     03 FILLER           PIC X(24) VALUE 'SALARIO TOTAL:'.        
+     03 ROD-SALTOT       PIC Z.ZZZ.ZZZ.ZZ9,99.                    
+ PROCEDURE DIVISION.                                              
+     PERFORM 100-INICIO  THRU 100-S.                              
+     PERFORM 200-PROC THRU 200-S UNTIL TIPO-T = '#' OR WS-FIM = 1 
+     PERFORM 300-FINAL   THRU 300-S.                              
+     GOBACK.                                                      
+ 100-INICIO.                                                      
+     DISPLAY '***************************************************'
+     DISPLAY '*            INICIO DO PROCESSAMENTO              *'
+     DISPLAY '***************************************************'
+     ACCEPT WS-DATA FROM DATE.                                    
+     STRING WS-DATA(5:2)'/'                                       
+            WS-DATA(3:2)'/'                                       
+            WS-DATA(1:2)                                          
+            DELIMITED BY SIZE INTO WS-DATAR                       
+     END-STRING                                                   
+     DISPLAY '* DATA DO PROCESSAMENTO: ' WS-DATAR  
+     OPEN INPUT ARQE002 OUTPUT RELATO.                          
+     READ ARQE002 AT END DISPLAY 'ARQ VAZIO' STOP RUN.          
+     IF TIPO-H NOT EQUAL '@'                                    
+        DISPLAY 'REGISTRO NAO EH UM HEADER! -- AVISAR ANALISTA' 
+        STOP RUN                                                
+     END-IF.                                                    
+     IF DT-CRI-H NOT = WS-DATAR                                 
+        DISPLAY 'DATA PROCESSAMENTO INVALIDA'                   
+        DISPLAY 'DATA DO PROCESSAMENTO HEADER : ' DT-CRI-H      
+        DISPLAY 'DATA DO SISTEMA : ' WS-DATAR                   
+        STOP RUN                                                
+     END-IF.                                                    
+     READ ARQE002 AT END DISPLAY 'ARQ SEM REG DETALHE' STOP RUN.
+ 100-S.                                                         
+     EXIT.                                                      
+ 200-PROC.                                                      
+     IF TIPO-D = '@'                                            
+        DISPLAY 'REGISTRO HEADER DUPLICADO'                     
+        STOP RUN                                                
+     END-IF.           
+     IF WS-LINHA > 60                                   
+        PERFORM 900-CAB THRU 900-S                      
+     END-IF.                                            
+     ADD             01             TO WS-TOTFUN.       
+     ADD             SALLIQ-D        TO WS-SALTOT.      
+     MOVE            MATRICULA-D    TO DET-MAT.         
+     MOVE            NOME-D         TO DET-NOME.        
+     MOVE            SALLIQ-D        TO DET-SALIQ.      
+     WRITE           REG-RELATO FROM DET-01 AFTER 1.    
+     ADD             01             TO WS-LINHA         
+     READ ARQE002    AT END         MOVE 1 TO WS-FIM.   
+     IF TIPO-T = '#'                                    
+        MOVE 1 TO WS-FIM                                
+     END-IF.                                            
+ 200-S.                                                 
+     EXIT.                                              
+ 300-FINAL.                                             
+     IF WS-TOTFUN NOT = TOTAL-REGISTRO-T                
+        DISPLAY 'TOTAL DE FUNCIONARIO DIVERGENTE'       
+        DISPLAY 'TOTAL DO TRAILLER : ' TOTAL-REGISTRO-T 
+        DISPLAY 'TOTAL CALCULADO : ' WS-TOTFUN        
+        STOP RUN                                      
+     END-IF.                                          
+     IF WS-SALTOT NOT = SOMALIQ-T                     
+        DISPLAY 'TOTAL DE SALARIOS DIVERGENTES'       
+        DISPLAY 'SALARIO REG TRAILLER : ' SOMALIQ-T   
+        MOVE WS-SALTOT TO WS-SALTOT-ED                
+        DISPLAY 'SAL TOTAL CALCULADO : ' WS-SALTOT-ED 
+        STOP RUN                                      
+     END-IF.                                          
+     MOVE WS-TOTFUN TO WS-TOTFUN-ED ROD-TOTFUN.       
+     WRITE REG-RELATO  FROM ROD-01 AFTER 3.           
+     MOVE WS-SALTOT    TO WS-SALTOT-ED                
+     DISPLAY '* TOTAL DE FUNCIONARIOS : ' WS-TOTFUN-ED
+     DISPLAY '* TOTAL DE SALARIOS : ' WS-SALTOT-ED    
+     CLOSE ARQE002 RELATO.                            
+ 300-S.                                               
+     EXIT.                                            
+ 900-CAB.                                             
+     ADD 1 TO WS-PAG.   
+     MOVE WS-PAG TO CAB-PAG.                     
+     MOVE WS-DATAR TO CAB-DATA.                  
+     WRITE REG-RELATO FROM CAB-01 AFTER PAGE.    
+     WRITE REG-RELATO FROM CAB-02 AFTER 1.       
+     WRITE REG-RELATO FROM CAB-03 AFTER 1.       
+     WRITE REG-RELATO FROM CAB-04 AFTER 1.       
+     WRITE REG-RELATO FROM CAB-05 AFTER 1.       
+     MOVE 5                         TO WS-LINHA. 
+ 900-S.                                          
+     EXIT.                                       
