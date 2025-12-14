@@ -1,1 +1,119 @@
-
+ IDENTIFICATION DIVISION.                                         
+ PROGRAM-ID. PROGFI03.                                            
+ AUTHOR. FILLIPE SOARES.                                          
+******************************************************************
+*SISTEMA DE TREINAMENTO - CURSO COBOL 02/2025                    *
+*MEU TERCEIRO PROGRAMA                                           *
+******************************************************************
+ ENVIRONMENT DIVISION.                                            
+ CONFIGURATION SECTION.                                           
+ SPECIAL-NAMES.                                                   
+     DECIMAL-POINT IS COMMA.                                      
+ INPUT-OUTPUT SECTION.                                            
+ FILE-CONTROL.                                                    
+     SELECT ARQE001 ASSIGN TO ENTRADA.                            
+     SELECT ARQS001 ASSIGN TO SAIDA.                              
+ DATA DIVISION.                                                   
+ FILE SECTION.                                                    
+ FD ARQE001 LABEL RECORD IS STANDARD                              
+            RECORDING MODE IS F     
+           RECORD CONTAINS 100 CHARACTERS                     
+           DATA RECORD IS REG-ARQE001.                        
+01  REG-ARQE001.                                              
+    03 MATRICULA-E        PIC 9(06).                          
+    03 NOME-E             PIC X(20).                          
+    03 FUNCAO-E           PIC X(15).                          
+    03 CARGO-E            PIC X(15).                          
+    03 SAL-E              PIC 9(08)V99.                       
+    03 GRAT-E             PIC 9(08)V99.                       
+    03 ABONO-E            PIC 9(08)V99.                       
+    03 DESC-E             PIC 9(08)V99.                       
+    03 SIT-E              PIC X(01).                          
+    03 SEX-E              PIC X(01).                          
+    03 FILLER             PIC X(02).                          
+FD ARQS001 LABEL RECORD IS STANDARD                           
+           RECORDING MODE IS F                                
+           RECORD CONTAINS 100 CHARACTERS                     
+           DATA RECORD ARE REG-HEADER REG-DETALHE REG-TRAILER.
+01  REG-HEADER.                                               
+    03 TIPO-H             PIC X(01).       
+    03 DT-CRI-H           PIC X(08).           
+    03 FILLER             PIC X(91).           
+01  REG-DETALHE.                               
+    03 TIPO-D             PIC 9(01).           
+    03 MATRICULA-D        PIC 9(06).           
+    03 NOME-D             PIC X(20).           
+    03 SALLIQ-D           PIC 9(10)V99.        
+    03 FILLER             PIC X(61).           
+01  REG-TRAILER.                               
+    03 TIPO-T             PIC X(01).           
+    03 TOTAL-REGISTRO-T   PIC 9(06).           
+    03 SOMALIQ-T          PIC 9(10)V99.        
+    03 FILLER             PIC X(81).           
+WORKING-STORAGE SECTION.                       
+77 WS-SALLIQ              PIC 9(08)V99 VALUE 0.
+77 WS-TSALLIQ             PIC 9(10)V99 VALUE 0.
+77 WS-TSALLIQ-ED          PIC Z.ZZZ.ZZZ.ZZ9,99.
+77 WS-CONT                PIC 9(06)    VALUE 0.
+77 WS-CONT-INAT           PIC 9(06)    VALUE 0.
+77 WS-CONT-ATIV           PIC 9(06)    VALUE 0.
+ 77 WS-DATA                PIC 9(06)    VALUE 0.                
+ 77 WS-DATAR               PIC X(08)    VALUE SPACES.           
+ 77 WS-FIM                 PIC 9(01)    VALUE 0.                
+ PROCEDURE DIVISION.                                            
+     PERFORM 100-INICIO    THRU 100-S                           
+     PERFORM 200-PROC      THRU 200-S                           
+     UNTIL WS-FIM = 1.                                          
+     PERFORM 300-FINAL     THRU 300-S                           
+     STOP RUN.                                                  
+ 100-INICIO.                                                    
+     DISPLAY '*** INICIO DO PROCESSAMENTO ***'                  
+     ACCEPT WS-DATA FROM DATE                                   
+     STRING WS-DATA(5:2) '/'                                    
+            WS-DATA(3:2) '/'                                    
+            WS-DATA(1:2)                                        
+     DELIMITED BY SIZE INTO WS-DATAR.                           
+     DISPLAY '**DATA DO PROCESSAMENTO : ' WS-DATAR              
+     OPEN INPUT  ARQE001                                        
+          OUTPUT ARQS001.                                       
+     READ ARQE001 AT END DISPLAY '** ARQUIVO VAZIO **' STOP RUN.
+     MOVE '@'      TO TIPO-H                             
+     MOVE WS-DATAR TO DT-CRI-H                           
+     WRITE REG-HEADER.                                   
+ 100-S.                                                  
+     EXIT.                                               
+ 200-PROC.                                               
+     IF SIT-E NOT = 'A'                                  
+        ADD 1 TO WS-CONT-INAT                            
+     ELSE                                                
+        COMPUTE WS-SALLIQ = ((SAL-E + ABONO-E + GRAT-E) -
+                              DESC-E) * 1,06             
+        ADD 1 TO WS-CONT-ATIV                            
+        ADD WS-SALLIQ             TO WS-TSALLIQ          
+        MOVE 1                    TO TIPO-D              
+        MOVE MATRICULA-E          TO MATRICULA-D         
+        MOVE NOME-E               TO NOME-D              
+        MOVE WS-SALLIQ            TO SALLIQ-D            
+        WRITE REG-DETALHE                                
+     END-IF.                                             
+     READ ARQE001 AT END MOVE 1 TO WS-FIM.     
+ 200-S.                                                      
+     EXIT.                                                   
+ 300-FINAL.                                                  
+*    COMPUTE WS-CONT = WS-CONT-INAT + WS-CONT-ATIV           
+     ADD WS-CONT-INAT WS-CONT-ATIV TO WS-CONT.               
+     MOVE    WS-TSALLIQ           TO WS-TSALLIQ-ED           
+     MOVE    '#'                  TO TIPO-T                  
+     MOVE    WS-CONT-ATIV         TO TOTAL-REGISTRO-T        
+     MOVE    WS-TSALLIQ           TO SOMALIQ-T               
+     WRITE   REG-TRAILER.                                    
+     DISPLAY '****************************************'      
+     DISPLAY '* TOTAL DE SALARIOS LIQUIDOS : ' WS-TSALLIQ-ED 
+     DISPLAY '* TOTAL DE FUNCIONARIOS      : ' WS-CONT       
+     DISPLAY '* TOTAL DE FUNC ATIVOS       : ' WS-CONT-ATIV  
+     DISPLAY '* TOTAL DE FUNC INATIVOS     : ' WS-CONT-INAT  
+     DISPLAY '* FINAL DE PROCESSAMENTO *'                    
+     DISPLAY '****************************************'      
+     CLOSE ARQE001 ARQS001.                                  
+ 300-S.                                                      
+     EXIT.                                                   
