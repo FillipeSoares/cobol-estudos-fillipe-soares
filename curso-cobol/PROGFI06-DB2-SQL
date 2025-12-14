@@ -1,1 +1,125 @@
-
+  IDENTIFICATION DIVISION.                                         
+  PROGRAM-ID. PROGFI06.                                            
+  AUTHOR. FILLIPE                                                  
+ *---------------------------------------------------------------*
+ *    SISTEMA    :SIGFI -  GESTAO DE TREINAMENTO                 * 
+ *    PROGRAMA   :PROGFI06                                       * 
+ *    OBJETIVO   :LER ARQUIVOS DE ENTRADA E EFETUAR INSERT NA    * 
+ *                TABELA DB2.                                    * 
+ *    ANALISTA   :FILLIPE                                        * 
+ *    PROGRAMADOR:FILLIPE                                        * 
+ *    DATA       :11/12/2025                                     * 
+ *    LINGUAGEM  :COBOL BATH                                     * 
+ *    VERSAO     :001                                            * 
+ *---------------------------------------------------------------* 
+  ENVIRONMENT DIVISION.                                            
+  CONFIGURATION SECTION.                                           
+  SPECIAL-NAMES.                                                   
+      DECIMAL-POINT IS COMMA.                                      
+  INPUT-OUTPUT SECTION.     
+  FILE-CONTROL.                                          
+      SELECT ARQE001 ASSIGN TO ENTRADA.                  
+  DATA DIVISION.                                         
+  FILE SECTION.                                          
+  COPY 'ARQE001'.                                        
+ *                                                       
+  WORKING-STORAGE SECTION.                               
+  77 WS-FIM               PIC 9(01)        VALUE ZERO.   
+  77 WS-TS-TIMESTAMP      PIC X(26)        VALUE SPACES. 
+  77 WS-DT-SISTEMA        PIC 9(10)        VALUE ZEROS.  
+  77 WS-HH-SISTEMA        PIC X(08)        VALUE SPACES. 
+  77 WS-SALIQ             PIC 9(08)V99     VALUE ZEROS.  
+  77 WS-CONT              PIC 9(03)        VALUE ZEROS.  
+  77 WS-CNT-INS           PIC 9(03)        VALUE ZEROS.  
+  77 WS-CNT-REJ           PIC 9(03)        VALUE ZEROS.  
+  77 WS-SQLCODE           PIC -999         VALUE ZEROS.  
+ *                                                       
+      EXEC SQL INCLUDE FUNC001 END-EXEC.                 
+      EXEC SQL INCLUDE SQLCA   END-EXEC.                 
+  PROCEDURE DIVISION.     
+     PERFORM 100-INICIAL     THRU 100-S.                     
+     PERFORM 200-PROCESSA    THRU 200-S UNTIL WS-FIM EQUAL 1.
+     PERFORM 300-FINAL       THRU 300-S.                     
+     STOP RUN.                                               
+ 100-INICIAL.                                                
+     OPEN INPUT ARQE001.                                     
+     EXEC SQL                                                
+          SET :WS-TS-TIMESTAMP = CURRENT_TIMESTAMP           
+     END-EXEC.                                               
+*                                                            
+     STRING WS-TS-TIMESTAMP(09:02)'.'                        
+            WS-TS-TIMESTAMP(06:02)'.'                        
+            WS-TS-TIMESTAMP(01:04)                           
+            DELIMITED BY SIZE INTO WS-DT-SISTEMA             
+     END-STRING.                                             
+*                                                            
+     MOVE WS-TS-TIMESTAMP(12:10) TO WS-HH-SISTEMA            
+     DISPLAY 'DATA: ' WS-DT-SISTEMA.                         
+     DISPLAY 'HORA: ' WS-HH-SISTEMA.                         
+     DISPLAY 'INICIO DO PROGRAMA '.                          
+     READ ARQE001 AT END DISPLAY 'ARQUIVO VAZIO' GOBACK.
+ 100-S.                                                 
+     EXIT.                                              
+ 200-PROCESSA.                                          
+     IF SIT-E EQUAL 'A'                                 
+        COMPUTE WS-SALIQ = SAL-E + ABONO-E - DESC-E     
+        ADD 1                TO WS-CONT                 
+        MOVE MAT-E           TO MAT-FUNC                
+        MOVE NOME-E          TO NOME-FUNC               
+        MOVE FUNCAO-E          TO FUNCAO-FUNC           
+        MOVE CARGO-E         TO CARGO-FUNC              
+        MOVE SAL-E           TO SALARIO-FUNC            
+        MOVE GRAT-E          TO SALFUN-FUNC             
+        MOVE ABONO-E         TO ABONO-FUNC              
+        MOVE WS-SALIQ       TO LIQUIDO-FUNC             
+        PERFORM 400-INSERT   THRU 400-S                 
+     END-IF.                                            
+     READ ARQE001 AT END     MOVE 1 TO WS-FIM.          
+ 200-S.                                                 
+     EXIT.     
+*                                                               
+ 300-FINAL.                                                     
+     DISPLAY 'TOTAL DE REGISTROS LIDOS         --> ' WS-CONT.   
+     DISPLAY 'TOTAL DE REGISTROS INCLUIDOS     --> ' WS-CNT-INS.
+     DISPLAY 'TOTAL DE REGISTROS REJEITADOS    --> ' WS-CNT-REJ.
+     CLOSE ARQE001.                                             
+ 300-S.                                                         
+     EXIT.                                                      
+*                                                               
+ 400-INSERT.                                                    
+     EXEC SQL                                                   
+          INSERT INTO P390.FUNC_001                             
+                 (MAT_FUNC                                      
+                 , NOME_FUNC                                    
+                 , CARGO_FUNC                                   
+                 , FUNCAO_FUNC                                  
+                 , CARGO_FUNC                                   
+                 , SALARIO_FUNC                                 
+                 , SALFUN_FUNC                                  
+                 , ABONO_FUNC        
+                 , LIQUIDO_FUNC                                   
+                 , TS_FUNC                                        
+                 , DT_PGTO_FUNC)                                  
+                 VALUES                                           
+                 (:MAT-FUNC                                       
+                 , :NOME-FUNC                                     
+                 , :FUNCAO-FUNC                                   
+                 , :CARGO-FUNC                                    
+                 , :SALARIO-FUNC                                  
+                 , :SALFUN-FUNC                                   
+                 , :ABONO-FUNC                                    
+                 , :LIQUIDO-FUNC                                  
+                 , CURRENT_TIMESTAMP                              
+                 , CURRENT_DATE)                                  
+     END-EXEC.                                                    
+     IF SQLCODE NOT EQUAL ZEROS                                   
+        DISPLAY 'ERRO NA TENTATIVA DE INCLUSAO'                   
+        DISPLAY 'INCLUSAO NAO EFETUADA PARA O REGISTRO: ' MAT-FUNC
+        MOVE SQLCODE TO WS-SQLCODE                                
+        DISPLAY 'SQLCODE --> ' WS-SQLCODE       
+         ADD 1    TO WS-CNT-REJ           
+      ELSE                                
+         ADD 1    TO WS-CNT-INS           
+      END-IF.                             
+  400-S.                                  
+      EXIT.                               
